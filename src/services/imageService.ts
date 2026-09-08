@@ -4,7 +4,42 @@ import { updateStartupImage } from './botSettings';
 import { logger } from '../utils/logger';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+/**
+ * Sniffs the actual image format from its magic bytes rather than trusting
+ * Telegram's file server Content-Type header (it commonly serves
+ * application/octet-stream regardless of the real format). Falls back to
+ * JPEG, which is what Telegram always produces for a compressed `photo`
+ * upload — the only path that reaches this function.
+ */
+function detectImageContentType(buffer: Buffer): string {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  if (buffer.length >= 6 && buffer.toString('ascii', 0, 6).match(/^GIF8[79]a$/)) {
+    return 'image/gif';
+  }
+  if (buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d) {
+    return 'image/bmp';
+  }
+  return 'image/jpeg';
+}
 
 /**
  * Downloads a Telegram-hosted photo into memory, validates it, uploads it
@@ -25,13 +60,9 @@ export async function processAdminStartupImageUpload(
     throw new Error('Could not download the image from Telegram.');
   }
 
-  const contentType = response.headers.get('content-type') ?? 'image/jpeg';
-  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
-    throw new Error('Unsupported image format. Please upload a JPEG, PNG, or WebP image.');
-  }
-
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+  const contentType = detectImageContentType(buffer);
 
   if (buffer.byteLength === 0) {
     throw new Error('The downloaded image is empty.');
