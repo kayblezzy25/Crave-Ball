@@ -1,0 +1,27 @@
+{
+  "name": "crave-ball-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot with Firebase backend (Firestore + Cloud Storage) and Railway hosting. Admins manage startup content directly from Telegram.",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.7.0",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.2"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
