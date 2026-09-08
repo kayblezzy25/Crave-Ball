@@ -18,9 +18,22 @@ export const logger = {
     console.warn(format('WARN', message, fields));
   },
   error(message: string, error?: unknown, fields?: LogFields): void {
-    const errFields =
+    // Supabase/Postgrest errors are plain objects with a `.message` (and
+    // often `.code`/`.details`), not `Error` instances, so duck-type
+    // rather than requiring `instanceof Error`.
+    const errorMessage =
       error instanceof Error
-        ? { ...fields, error: error.message }
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : undefined;
+    const errorCode =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code: unknown }).code)
+        : undefined;
+    const errFields =
+      errorMessage !== undefined
+        ? { ...fields, error: errorMessage, ...(errorCode ? { code: errorCode } : {}) }
         : fields;
     console.error(format('ERROR', message, errFields));
   },
