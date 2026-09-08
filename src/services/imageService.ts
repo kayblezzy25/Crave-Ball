@@ -1,5 +1,5 @@
 import { Telegram } from 'telegraf';
-import { uploadStartupImage } from '../firebase/storage';
+import { uploadStartupImage } from '../supabase/storage';
 import { updateStartupImage } from './botSettings';
 import { logger } from '../utils/logger';
 
@@ -8,14 +8,15 @@ const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 /**
  * Downloads a Telegram-hosted photo into memory, validates it, uploads it
- * to Firebase Cloud Storage, and records the new reference in Firestore.
+ * to Supabase Storage, and records the new reference in the database.
  * The file only ever touches local memory/tmp — Railway's filesystem is
  * never used as permanent storage.
  */
 export async function processAdminStartupImageUpload(
   telegram: Telegram,
   fileId: string,
-  updatedBy: number
+  updatedBy: number,
+  bucket: string
 ): Promise<{ url: string }> {
   const fileLink = await telegram.getFileLink(fileId);
 
@@ -41,7 +42,7 @@ export async function processAdminStartupImageUpload(
     );
   }
 
-  const { path, url } = await uploadStartupImage(buffer, contentType);
+  const { path, url } = await uploadStartupImage(buffer, contentType, bucket);
   await updateStartupImage(path, url, updatedBy);
 
   logger.info('Admin startup image upload processed', { updatedBy, bytes: buffer.byteLength });

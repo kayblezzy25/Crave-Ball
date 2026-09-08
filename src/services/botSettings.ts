@@ -1,10 +1,10 @@
-import admin from 'firebase-admin';
-import { getDb } from '../firebase/config';
+import { getSupabase } from '../supabase/config';
 import {
-  generalSettingsRef,
-  BotGeneralSettings,
+  BOT_SETTINGS_TABLE,
+  GENERAL_SETTINGS_ID,
+  BotGeneralSettingsRow,
   InlineButtonConfig,
-} from '../firebase/firestore';
+} from '../supabase/database';
 import { logger } from '../utils/logger';
 
 const DEFAULT_STARTUP_MESSAGE =
@@ -13,36 +13,78 @@ const DEFAULT_STARTUP_MESSAGE =
 const MAX_MESSAGE_LENGTH = 1024; // Telegram caption limit
 const MAX_BUTTONS = 10;
 
+export interface StartupConfig {
+  startup_message: string;
+  startup_image_path: string | null;
+  startup_image_url: string | null;
+  buttons: InlineButtonConfig[];
+  updated_at: string | null;
+  updated_by: number | null;
+}
+
 /**
  * Reads the active startup configuration used by /start. Returns sane
- * defaults if the document has never been created, so a brand-new
- * deployment doesn't crash on the very first /start.
+ * defaults if the row has never been created (e.g. schema.sql hasn't been
+ * run yet), so a brand-new deployment doesn't crash on the very first
+ * /start.
  */
-export async function getStartupConfig(): Promise<BotGeneralSettings> {
-  try {
-    const snap = await generalSettingsRef().get();
-    if (!snap.exists) {
-      return {
-        startup_message: DEFAULT_STARTUP_MESSAGE,
-        startup_image_path: null,
-        startup_image_url: null,
-        buttons: [],
-        updated_at: null,
-        updated_by: null,
-      };
-    }
-    const data = snap.data() as Partial<BotGeneralSettings>;
+export async function getStartupConfig(): Promise<StartupConfig> {
+  const { data, error } = await getSupabase()
+    .from(BOT_SETTINGS_TABLE)
+    .select('*')
+    .eq('id', GENERAL_SETTINGS_ID)
+    .maybeSingle<BotGeneralSettingsRow>();
+
+  if (error) {
+    logger.error('Failed to read startup configuration from Supabase', error);
+    throw new Error('Could not read the bot configuration from Supabase.');
+  }
+
+  if (!data) {
     return {
-      startup_message: data.startup_message ?? DEFAULT_STARTUP_MESSAGE,
-      startup_image_path: data.startup_image_path ?? null,
-      startup_image_url: data.startup_image_url ?? null,
-      buttons: data.buttons ?? [],
-      updated_at: data.updated_at ?? null,
-      updated_by: data.updated_by ?? null,
+      startup_message: DEFAULT_STARTUP_MESSAGE,
+      startup_image_path: null,
+      startup_image_url: null,
+      buttons: [],
+      updated_at: null,
+      updated_by: null,
     };
-  } catch (error) {
-    logger.error('Failed to read startup configuration from Firestore', error);
-    throw new Error('Could not read the bot configuration from Firestore.');
+  }
+
+  return {
+    startup_message: data.startup_message ?? DEFAULT_STARTUP_MESSAGE,
+    startup_image_path: data.startup_image_path,
+    startup_image_url: data.startup_image_url,
+    buttons: data.buttons ?? [],
+    updated_at: data.updated_at,
+    updated_by: data.updated_by,
+  };
+}
+
+async function upsertGeneralSettings(
+  fields: Partial<
+    Pick<
+      BotGeneralSettingsRow,
+      'startup_message' | 'startup_image_path' | 'startup_image_url' | 'buttons'
+    >
+  >,
+  updatedBy: number
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from(BOT_SETTINGS_TABLE)
+    .upsert(
+      {
+        id: GENERAL_SETTINGS_ID,
+        ...fields,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy,
+      },
+      { onConflict: 'id' }
+    );
+
+  if (error) {
+    logger.error('Failed to write bot settings to Supabase', error);
+    throw new Error('Could not save the change to Supabase.');
   }
 }
 
@@ -60,20 +102,8 @@ export async function updateStartupMessage(
     );
   }
 
-  try {
-    await generalSettingsRef().set(
-      {
-        startup_message: trimmed,
-        updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        updated_by: updatedBy,
-      },
-      { merge: true }
-    );
-    logger.info('Startup message updated', { updatedBy });
-  } catch (error) {
-    logger.error('Failed to write startup message to Firestore', error);
-    throw new Error('Could not save the startup message to Firestore.');
-  }
+  await upsertGeneralSettings({ startup_message: trimmed }, updatedBy);
+  logger.info('Startup message updated', { updatedBy });
 }
 
 export async function updateStartupImage(
@@ -81,21 +111,8 @@ export async function updateStartupImage(
   url: string,
   updatedBy: number
 ): Promise<void> {
-  try {
-    await generalSettingsRef().set(
-      {
-        startup_image_path: path,
-        startup_image_url: url,
-        updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        updated_by: updatedBy,
-      },
-      { merge: true }
-    );
-    logger.info('Startup image reference updated', { updatedBy, path });
-  } catch (error) {
-    logger.error('Failed to write startup image reference to Firestore', error);
-    throw new Error('Could not save the image reference to Firestore.');
-  }
+  await upsertGeneralSettings({ startup_image_path: path, startup_image_url: url }, updatedBy);
+  logger.info('Startup image reference updated', { updatedBy, path });
 }
 
 export async function addButton(
@@ -108,41 +125,12 @@ export async function addButton(
   }
   const buttons = [...config.buttons, button];
 
-  try {
-    await generalSettingsRef().set(
-      {
-        buttons,
-        updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        updated_by: updatedBy,
-      },
-      { merge: true }
-    );
-    logger.info('Startup button added', { updatedBy, text: button.text });
-    return buttons;
-  } catch (error) {
-    logger.error('Failed to add button in Firestore', error);
-    throw new Error('Could not save the new button to Firestore.');
-  }
+  await upsertGeneralSettings({ buttons }, updatedBy);
+  logger.info('Startup button added', { updatedBy, text: button.text });
+  return buttons;
 }
 
 export async function clearButtons(updatedBy: number): Promise<void> {
-  try {
-    await generalSettingsRef().set(
-      {
-        buttons: [],
-        updated_at: admin.firestore.FieldValue.serverTimestamp(),
-        updated_by: updatedBy,
-      },
-      { merge: true }
-    );
-    logger.info('Startup buttons cleared', { updatedBy });
-  } catch (error) {
-    logger.error('Failed to clear buttons in Firestore', error);
-    throw new Error('Could not clear buttons in Firestore.');
-  }
-}
-
-export function assertFirestoreConfigured(): void {
-  // Cheap sanity check used at startup; throws if the SDK was never initialized.
-  getDb();
+  await upsertGeneralSettings({ buttons: [] }, updatedBy);
+  logger.info('Startup buttons cleared', { updatedBy });
 }

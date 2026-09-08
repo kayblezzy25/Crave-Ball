@@ -92,7 +92,7 @@ export async function handleAdminCallback(ctx: Context): Promise<void> {
       case 'admin:settings': {
         clearAdminAction(userId);
         const config = await getStartupConfig();
-        const updatedAt = config.updated_at ? config.updated_at.toDate().toISOString() : 'never';
+        const updatedAt = config.updated_at ?? 'never';
         await ctx.editMessageText(
           `⚙️ SETTINGS\n\nLast updated: ${updatedAt}\nUpdated by: ${config.updated_by ?? 'n/a'}\nButtons configured: ${config.buttons.length}`,
           backToAdminKeyboard()

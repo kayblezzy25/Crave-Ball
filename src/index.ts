@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { loadEnvironment } from './config/environment';
-import { initializeFirebase } from './firebase/config';
-import { configureAuthorizedAdmins, syncAdminsToFirestore } from './services/adminService';
+import { initializeSupabase } from './supabase/config';
+import { configureAuthorizedAdmins, syncAdminsToSupabase } from './services/adminService';
 import { createBot } from './bot';
 import { startWebhookServer, WEBHOOK_PATH } from './server/webhook';
 import { logger } from './utils/logger';
@@ -11,9 +11,9 @@ async function main(): Promise<void> {
 
   const env = loadEnvironment();
 
-  initializeFirebase(env);
+  initializeSupabase(env);
   configureAuthorizedAdmins(env.adminTelegramIds);
-  await syncAdminsToFirestore(env.adminTelegramIds);
+  await syncAdminsToSupabase(env.adminTelegramIds);
 
   const bot = createBot(env.telegramBotToken);
 

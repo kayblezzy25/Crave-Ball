@@ -5,10 +5,9 @@
  */
 export interface EnvironmentConfig {
   telegramBotToken: string;
-  firebaseProjectId: string;
-  firebaseClientEmail: string;
-  firebasePrivateKey: string;
-  firebaseStorageBucket: string;
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
+  supabaseStorageBucket: string;
   adminTelegramIds: number[];
   webhookUrl: string | null;
   webhookSecret: string | null;
@@ -47,12 +46,6 @@ function parseAdminIds(raw: string): number[] {
   return ids;
 }
 
-function normalizePrivateKey(raw: string): string {
-  // Railway (and most host env-var stores) cannot hold real newlines, so the
-  // key is supplied with literal "\n" sequences that must be converted back.
-  return raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw;
-}
-
 let cached: EnvironmentConfig | null = null;
 
 export function loadEnvironment(): EnvironmentConfig {
@@ -60,10 +53,9 @@ export function loadEnvironment(): EnvironmentConfig {
 
   const config: EnvironmentConfig = {
     telegramBotToken: required('TELEGRAM_BOT_TOKEN'),
-    firebaseProjectId: required('FIREBASE_PROJECT_ID'),
-    firebaseClientEmail: required('FIREBASE_CLIENT_EMAIL'),
-    firebasePrivateKey: normalizePrivateKey(required('FIREBASE_PRIVATE_KEY')),
-    firebaseStorageBucket: required('FIREBASE_STORAGE_BUCKET'),
+    supabaseUrl: required('SUPABASE_URL'),
+    supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
+    supabaseStorageBucket: required('SUPABASE_STORAGE_BUCKET'),
     adminTelegramIds: parseAdminIds(required('ADMIN_TELEGRAM_IDS')),
     webhookUrl: process.env.WEBHOOK_URL?.trim()
       ? process.env.WEBHOOK_URL.trim().replace(/\/+$/, '')

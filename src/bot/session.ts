@@ -1,7 +1,7 @@
 /**
  * Short-lived in-memory state for multi-step admin flows (e.g. "waiting for
  * the admin to send a new startup image"). Deliberately not persisted to
- * Firestore — it's conversational scaffolding, not bot configuration, and a
+ * Supabase — it's conversational scaffolding, not bot configuration, and a
  * single long-running Railway process is enough to hold it. Entries expire
  * on their own so an abandoned flow doesn't linger forever.
  */

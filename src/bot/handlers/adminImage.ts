@@ -4,6 +4,7 @@ import { isAuthorizedAdmin } from '../../services/adminService';
 import { processAdminStartupImageUpload } from '../../services/imageService';
 import { getAdminAction, clearAdminAction } from '../session';
 import { adminPanelKeyboard } from '../keyboards/adminKeyboard';
+import { loadEnvironment } from '../../config/environment';
 import { logger } from '../../utils/logger';
 
 /**
@@ -20,10 +21,11 @@ export async function handleAdminPhotoUpload(ctx: Context): Promise<void> {
   const photos = ctx.message.photo;
   const largest = photos[photos.length - 1];
 
-  const statusMessage = await ctx.reply('⏳ Uploading image to Firebase Cloud Storage...');
+  const statusMessage = await ctx.reply('⏳ Uploading image to Supabase Storage...');
 
   try {
-    await processAdminStartupImageUpload(ctx.telegram, largest.file_id, userId);
+    const { supabaseStorageBucket } = loadEnvironment();
+    await processAdminStartupImageUpload(ctx.telegram, largest.file_id, userId, supabaseStorageBucket);
     clearAdminAction(userId);
     await ctx.telegram.editMessageText(
       ctx.chat!.id,
