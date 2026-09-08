@@ -1,7 +1,7 @@
 {
   "name": "crave-ball-telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram bot with Firebase backend (Firestore + Cloud Storage) and Railway hosting. Admins manage startup content directly from Telegram.",
+  "description": "Telegram bot with Supabase backend (Postgres + Storage) and Railway hosting. Admins manage startup content directly from Telegram.",
   "main": "dist/index.js",
   "engines": {
     "node": ">=22.0.0"
