@@ -116,6 +116,7 @@ directly in Railway's **Variables** tab for deployment:
 | `SUPABASE_URL` | Project URL from Supabase API settings. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role secret key. Never the anon key. Never commit it. |
 | `SUPABASE_STORAGE_BUCKET` | Name of the public bucket you created, e.g. `bot-media`. |
+| `BOT_INSTANCE_ID` | Optional. Only set this if multiple bot deployments share the same Supabase project/bucket — give each a distinct value so their startup content and images don't collide. Leave unset otherwise. |
 | `ADMIN_TELEGRAM_IDS` | Comma-separated numeric Telegram user IDs. Numeric IDs only — never usernames. |
 | `WEBHOOK_URL` | Public HTTPS base URL of the deployed app, e.g. `https://your-app.up.railway.app`. Leave empty locally to fall back to long polling. |
 | `TELEGRAM_WEBHOOK_SECRET` | Optional random string; Telegram echoes it back on every webhook call so the endpoint can reject requests that didn't come from Telegram. |

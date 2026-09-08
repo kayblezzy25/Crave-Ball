@@ -12,6 +12,14 @@ export interface EnvironmentConfig {
   webhookUrl: string | null;
   webhookSecret: string | null;
   port: number;
+  /**
+   * Namespaces the bot_settings row and Storage object path so multiple
+   * bot deployments can safely share one Supabase project/bucket. Defaults
+   * to 'general', which keeps the original unprefixed row id and storage
+   * path — existing single-bot deployments are unaffected unless this is
+   * explicitly set.
+   */
+  botInstanceId: string;
 }
 
 function required(name: string): string {
@@ -62,6 +70,7 @@ export function loadEnvironment(): EnvironmentConfig {
       : null,
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || null,
     port: Number(process.env.PORT) || 3000,
+    botInstanceId: process.env.BOT_INSTANCE_ID?.trim() || 'general',
   };
 
   cached = config;

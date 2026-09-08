@@ -1,6 +1,7 @@
 import { Telegram } from 'telegraf';
 import { uploadStartupImage } from '../supabase/storage';
 import { updateStartupImage } from './botSettings';
+import { loadEnvironment } from '../config/environment';
 import { logger } from '../utils/logger';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -73,7 +74,12 @@ export async function processAdminStartupImageUpload(
     );
   }
 
-  const { path, url } = await uploadStartupImage(buffer, contentType, bucket);
+  const { path, url } = await uploadStartupImage(
+    buffer,
+    contentType,
+    bucket,
+    loadEnvironment().botInstanceId
+  );
   await updateStartupImage(path, url, updatedBy);
 
   logger.info('Admin startup image upload processed', { updatedBy, bytes: buffer.byteLength });

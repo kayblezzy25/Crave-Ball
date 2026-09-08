@@ -3,7 +3,10 @@
  * creates these tables in the Supabase project — run it once in the
  * Supabase SQL editor before starting the bot.
  *
- * bot_settings (single row, id='general')  -> startup content, buttons
+ * bot_settings (row id = BOT_INSTANCE_ID, default 'general') -> startup
+ *   content, buttons. The row id is namespaced by the optional
+ *   BOT_INSTANCE_ID env var (see config/environment.ts) so multiple bot
+ *   deployments can share one Supabase project without colliding.
  * admins (telegram_id primary key)          -> AdminRecord
  *
  * Kept intentionally flat and small so future tables (announcements,
@@ -35,5 +38,4 @@ export interface AdminRow {
 }
 
 export const BOT_SETTINGS_TABLE = 'bot_settings';
-export const GENERAL_SETTINGS_ID = 'general';
 export const ADMINS_TABLE = 'admins';

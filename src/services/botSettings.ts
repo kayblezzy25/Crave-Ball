@@ -1,10 +1,10 @@
 import { getSupabase } from '../supabase/config';
 import {
   BOT_SETTINGS_TABLE,
-  GENERAL_SETTINGS_ID,
   BotGeneralSettingsRow,
   InlineButtonConfig,
 } from '../supabase/database';
+import { loadEnvironment } from '../config/environment';
 import { logger } from '../utils/logger';
 
 const DEFAULT_STARTUP_MESSAGE =
@@ -32,7 +32,7 @@ export async function getStartupConfig(): Promise<StartupConfig> {
   const { data, error } = await getSupabase()
     .from(BOT_SETTINGS_TABLE)
     .select('*')
-    .eq('id', GENERAL_SETTINGS_ID)
+    .eq('id', loadEnvironment().botInstanceId)
     .maybeSingle<BotGeneralSettingsRow>();
 
   if (error) {
@@ -74,7 +74,7 @@ async function upsertGeneralSettings(
     .from(BOT_SETTINGS_TABLE)
     .upsert(
       {
-        id: GENERAL_SETTINGS_ID,
+        id: loadEnvironment().botInstanceId,
         ...fields,
         updated_at: new Date().toISOString(),
         updated_by: updatedBy,
